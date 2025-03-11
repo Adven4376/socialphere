@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Bell, Home, Search, MessagesSquare, User, Menu, X } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, Home, Search, MessagesSquare, User, Menu, X, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +24,9 @@ const Navbar = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
+  // Mock authentication state - this would come from your auth context/provider in a real app
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Handle scroll effect
   useEffect(() => {
@@ -37,6 +40,12 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [scrolled]);
+
+  const handleLogout = () => {
+    // This would call your logout API endpoint in a real app
+    setIsAuthenticated(false);
+    navigate('/login');
+  };
 
   return (
     <header
@@ -56,52 +65,90 @@ const Navbar = () => {
         </Link>
 
         {isMobile ? (
-          <MobileNav currentPath={location.pathname} />
+          <MobileNav currentPath={location.pathname} isAuthenticated={isAuthenticated} onLogout={handleLogout} />
         ) : (
-          <DesktopNav currentPath={location.pathname} />
+          <DesktopNav currentPath={location.pathname} isAuthenticated={isAuthenticated} onLogout={handleLogout} />
         )}
       </div>
     </header>
   );
 };
 
-const DesktopNav = ({ currentPath }: { currentPath: string }) => {
+const DesktopNav = ({ 
+  currentPath, 
+  isAuthenticated, 
+  onLogout 
+}: { 
+  currentPath: string;
+  isAuthenticated: boolean;
+  onLogout: () => void;
+}) => {
   return (
     <div className="flex items-center gap-2">
-      <nav className="hidden md:flex items-center gap-1 mr-4">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentPath === item.path;
+      {isAuthenticated ? (
+        <>
+          <nav className="hidden md:flex items-center gap-1 mr-4">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPath === item.path;
 
-          return (
-            <Link key={item.path} to={item.path}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "px-3 gap-2 transition-all", 
-                  isActive 
-                    ? "font-medium text-primary" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </Button>
-            </Link>
-          );
-        })}
-      </nav>
-      
-      <Avatar>
-        <AvatarImage src="https://github.com/shadcn.png" />
-        <AvatarFallback>CN</AvatarFallback>
-      </Avatar>
+              return (
+                <Link key={item.path} to={item.path}>
+                  <Button
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    className={cn(
+                      "px-3 gap-2 transition-all", 
+                      isActive 
+                        ? "font-medium text-primary" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon size={18} />
+                    <span>{item.label}</span>
+                  </Button>
+                </Link>
+              );
+            })}
+          </nav>
+          
+          <Avatar>
+            <AvatarImage src="https://github.com/shadcn.png" />
+            <AvatarFallback>CN</AvatarFallback>
+          </Avatar>
+        </>
+      ) : (
+        <Link to="/login">
+          <Button variant="default" size="sm" className="gap-2">
+            <LogIn size={18} />
+            <span>Login</span>
+          </Button>
+        </Link>
+      )}
     </div>
   );
 };
 
-const MobileNav = ({ currentPath }: { currentPath: string }) => {
+const MobileNav = ({ 
+  currentPath, 
+  isAuthenticated, 
+  onLogout 
+}: { 
+  currentPath: string;
+  isAuthenticated: boolean;
+  onLogout: () => void;
+}) => {
+  if (!isAuthenticated) {
+    return (
+      <Link to="/login">
+        <Button variant="default" size="sm" className="gap-2">
+          <LogIn size={16} />
+          <span>Login</span>
+        </Button>
+      </Link>
+    );
+  }
+
   return (
     <div className="flex items-center">
       <Sheet>
@@ -152,7 +199,7 @@ const MobileNav = ({ currentPath }: { currentPath: string }) => {
             </nav>
             
             <div className="p-4 border-t mt-auto">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={onLogout}>
                 Sign Out
               </Button>
             </div>
